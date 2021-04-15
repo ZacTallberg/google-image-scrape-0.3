@@ -11,15 +11,17 @@ STEPS TO SET UP:
 
 3) see commands below
 
-usage: **google_image_scrape.py --searchterm (string)** --help (help) --max (int) --savedir (string) --delay (float)
+**usage:**
+   - **google_image_scrape.py --searchterm (string)** --help (help) --max (int) --savedir (string) --delay (float)
+
 
 **usage examples:**
 
-   pipenv run python ./google_image_scrape.py --searchterm kittens
+   - pipenv run python ./google_image_scrape.py --searchterm kittens
 
-   pipenv run python ./google_image_scrape.py --max 200 --searchterm "happy kittens"
+   - pipenv run python ./google_image_scrape.py --max 200 --searchterm "happy kittens"
 
-   pipenv run python ./google_image_scrape.py --max 200 --searchterm "happy kittens" --savedir D:\my_favorite_pictures --delay 1.5
+   - pipenv run python ./google_image_scrape.py --max 200 --searchterm "happy kittens" --savedir D:\my_favorite_pictures --delay 1.5
 
                              
 **argument list:**
