@@ -7,11 +7,11 @@ Only supports .jpg, .png, and .jpeg, if you do not include {savedir} it will def
 
 STEPS TO SET UP:
 
-1) cd to project folder
+1) In a console, navigate to the project folder
 
-2) pipenv install
+2) Run "pipenv install"
 
-3) see commands below
+3) See commands below
 
 **usage:**
    - **google_image_scrape.py --searchterm (string)** --help (help) --max (int) --savedir (string) --delay (float)
