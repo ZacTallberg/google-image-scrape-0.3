@@ -1,5 +1,5 @@
 # google-image-scrape
-Attempt to download a {max} # of images from Google Images using {searchterm} to the folder {savedir}, optionally iterate through images with a {delay}
+Attempt to download a {max} # of images from Google Images using {searchterm} to the folder {savedir} and iterate through images with a {delay}
 
 Only supports .jpg, .png, and .jpeg, if you do not include a save location it will default to a new folder in your user's picture folder
 
