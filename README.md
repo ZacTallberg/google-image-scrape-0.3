@@ -9,14 +9,17 @@ STEPS TO SET UP:
 3) see commands below
 
 
-usage: google_image_scrape.py [-h] [--max int) [(int) ...]]
-                              [--searchterm (string)] [--savedir (string)]
+usage examples: 
+   pipenv run python ./google_image_scrape.py --searchterm kittens
+   pipenv run python ./google_image_scrape.py --max 200 --searchterm "happy kittens"
+   pipenv run python ./google_image_scrape.py --max 200 --searchterm "happy kittens" --savedir D:\my_favorite_pictures --delay 1.5
+
+usage: google_image_scrape.py [-h] 
+                              [--max (int)]
+                              [--searchterm (string)] 
+                              [--savedir (string)]
                               [--delay (float]
-
-Attempt to download a {max} # of images from Google Images using:
-{searchterm}; Only supports .jpg, .png, and .jpeg; If you do not include a
-save location it will default to a new folder in your user's picture folder
-
+                             
 optional arguments:
   -h, --help            show this help message and exit
   --max (int) [(int) ...]
