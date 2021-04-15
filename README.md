@@ -13,7 +13,7 @@ STEPS TO SET UP:
 
 3) see commands below
 
-**usage:** google_image_scrape.py -h (help) --searchterm (string) --max (int, optional) --savedir (string, optional) --delay (float, optional)
+**usage:** google_image_scrape.py --help (help) --searchterm (string) --max (int, optional) --savedir (string, optional) --delay (float, optional)
 
 **usage examples:**
 
