@@ -3,6 +3,8 @@ Attempt to download a {max} # of images from Google Images using {searchterm} to
 
 Only supports .jpg, .png, and .jpeg, if you do not include a save location it will default to a new folder in your user's picture folder
 
+(requires Python and Pip, https://www.python.org/ftp/python/3.9.4/python-3.9.4-amd64.exe)
+
 STEPS TO SET UP:
 
 1) cd to project folder
