@@ -14,7 +14,7 @@ STEPS TO SET UP:
 3) see commands below
 
 
-usage examples: 
+**usage examples: **
 
    pipenv run python ./google_image_scrape.py --searchterm kittens
 
@@ -22,13 +22,9 @@ usage examples:
 
    pipenv run python ./google_image_scrape.py --max 200 --searchterm "happy kittens" --savedir D:\my_favorite_pictures --delay 1.5
 
-usage: google_image_scrape.py [-h] 
-                              [--max (int)]
-                              [--searchterm (string)] 
-                              [--savedir (string)]
-                              [--delay (float]
+**usage:** google_image_scrape.py -h --max(int) --searchterm(string) --savedir(string) --delay(float)
                              
-optional arguments:
+**optional arguments:**
 
   -h, --help            show this help message and exit
 
