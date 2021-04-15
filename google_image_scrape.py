@@ -67,7 +67,7 @@ async def load_and_validate_image(thumbnail, page, number_of_files_in_folder, ma
                 else:
                     continue
                 
-                # Get rid of thegarbage after the .extension in the url 
+                # Get rid of the garbage after the .extension in the url 
                 image_src = check.split("?")[0]
                 
                 # Check to make sure it's of one of the extensions I want
