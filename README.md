@@ -32,7 +32,7 @@ STEPS TO SET UP:
 
   --max (int) [(int) ...]
                         Max number of images to be downloaded (defaults to 50)
-
+ 
   --searchterm (string)
                         Term to search for
 
