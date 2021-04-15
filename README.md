@@ -28,7 +28,7 @@ STEPS TO SET UP:
 
   -h, --help            show this help message and exit
 
-  --max (int) [(int) ...]
+  --max (int)
                         Max number of images to be downloaded (defaults to 50)
  
   --searchterm (string)
