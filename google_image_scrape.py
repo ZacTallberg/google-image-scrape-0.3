@@ -109,7 +109,7 @@ async def find_images(search_term, max_number, save_path, delay, start_time):
             # Since Google auto-loads images as you scroll, if you try to download enough of them you'll have to refresh your master list of thumbnails
             all_thumbnails[i]
         except:
-            # This is the google class for the parent of all thumbnails on the image search page
+            # These are the google classes for all thumbnails on the image search page
             all_thumbnails = await page.querySelectorAll('.islrc img.rg_i')
 
         try:
