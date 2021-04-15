@@ -34,8 +34,7 @@ STEPS TO SET UP:
   --searchterm (string)
                         Term to search for
 
-  --savedir (string)    Location to create folder named {searchterm} (if not
-                        assigned, defaults to your user's pictures folder)
+  --savedir (string)    Location to create folder named {searchterm} (defaults to your user's pictures folder)
 
   --delay (float)       Number of seconds to wait for Google to serve images,
                         if your success rate is low set this to 1.0 or higher
