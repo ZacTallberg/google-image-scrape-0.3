@@ -1,5 +1,5 @@
 # google-image-scrape
-Attempt to download a {max} # of images from Google Images using: {searchterm} in the folder {savedir}, optionally iterate through images with a {delay}
+Attempt to download a {max} # of images from Google Images using: {searchterm} to the folder {savedir}, optionally iterate through images with a {delay}
 
 
 
