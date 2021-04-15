@@ -1,7 +1,7 @@
 # google-image-scrape
 Attempt to download a {max} # of pics from Google Images by {searchterm} to the folder {savedir} and iterate through images with a {delay}
 
-Only supports .jpg, .png, and .jpeg, if you do not include a save location it will default to a new folder named {searchterm} in your user's picture folder
+Only supports .jpg, .png, and .jpeg, if you do not include {savedir} it will default to a new folder named {searchterm} in your user's picture folder
 
 (requires Python and Pip, https://www.python.org/ftp/python/3.9.4/python-3.9.4-amd64.exe)
 
