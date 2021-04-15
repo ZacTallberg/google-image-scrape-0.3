@@ -3,8 +3,6 @@ Attempt to download a {max} # of images from Google Images using {searchterm} to
 
 Only supports .jpg, .png, and .jpeg, if you do not include a save location it will default to a new folder in your user's picture folder
 
-**Only --searchterm is required**
-
 STEPS TO SET UP:
 
 1) cd to project folder
@@ -13,7 +11,7 @@ STEPS TO SET UP:
 
 3) see commands below
 
-**usage:** **google_image_scrape.py --searchterm (string)** --help (help) --max (int) --savedir (string) --delay (float)
+usage: **google_image_scrape.py --searchterm (string)** --help (help) --max (int) --savedir (string) --delay (float)
 
 **usage examples:**
 
