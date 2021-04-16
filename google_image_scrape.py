@@ -102,19 +102,52 @@ async def find_images(search_term, max_number, save_path, delay, start_time):
     if not os.path.isdir(save_path):
         os.makedirs(save_path)
 
-    
+    current_thumbnail = None
+
     # Attempt to download pictures a {max_number} of times
     for i in range(0, max-1):   
-        try:
-            # Since Google auto-loads images as you scroll, if you try to download enough of them you'll have to refresh your master list of thumbnails
-            all_thumbnails[i]
-        except:
-            # This is the google class for the parent of all thumbnails on the image search page
-            all_thumbnails = await page.querySelectorAll('.islrc img.rg_i')
+        print(current_thumbnail is not None)
+        if not current_thumbnail:
+            try:
+                # Since Google auto-loads images as you scroll, if you try to download enough of them you'll have to refresh your master list of thumbnails
+                current_thumbnail = await page.querySelector('.islrc img.rg_i')
+            except:
+                # This is the google class for the parent of all thumbnails on the image search page
+                print('Can not find the first thumbnail')
+                raise Exception('Can not find the first thumbnail, quitting')
+                break
+        else:
+            try:
+                next_thumbnail = await page.evaluate(
+                    '(current_thumbnail) => current_thumbnail.nextSibling',
+                    current_thumbnail
+                )
+                print('we got here')
+                current_thumbnail = next_thumbnail
+            except:
+                print('womp')
+
+
+
+
+
+
+        # try:
+        #     # Since Google auto-loads images as you scroll, if you try to download enough of them you'll have to refresh your master list of thumbnails
+        #     all_thumbnails[i]
+        # except:
+        #     # This is the google class for the parent of all thumbnails on the image search page
+        #     all_thumbnails = await page.querySelectorAll('.islrc img.rg_i')
+
+
+
+
+        
 
         try:
             number_of_downloads = len(os.listdir(save_path))
-            thumbnail = all_thumbnails[i]
+            thumbnail = current_thumbnail
+            import pdb; pdb.set_trace()
             # Create a new parallel task to download the image 
             success = await asyncio.create_task(load_and_validate_image(thumbnail, page, number_of_downloads, max, save_path, delay))
         except Exception as e:
