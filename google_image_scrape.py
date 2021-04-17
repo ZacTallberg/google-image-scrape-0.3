@@ -7,6 +7,7 @@ from tqdm import tqdm
 import random
 import argparse
 import datetime
+import threading
 
 
 
@@ -29,15 +30,21 @@ async def download(url, pathname):
     # progress bar, changing the unit to bytes instead of iteration (default by tqdm)
     progress = tqdm(response.iter_content(1024), f"Downloading {file_obj_name}", total=file_size, unit="B", unit_scale=True, unit_divisor=1024)
     with open(filename, "wb") as f:
-        for data in progress:
-            try:
-                # write data read to the file
-                f.write(data)
-                # update the progress bar manually
-                progress.update(len(data))
-            except Exception as e:
-                print("Error downloading: " + url + ", because: " + e)
-                break
+        try:
+            for data in progress:
+                try:
+                    # write data read to the file
+                    f.write(data)
+                    # update the progress bar manually
+                    progress.update(len(data))
+                except Exception as e:
+                    print("Error downloading: " + url + ", because: " + e)
+                    break
+        except:
+            print('Error downloading image' + file_obj_name)
+            pass
+        else:
+            RUNTIME_STORAGE.number_of_downloads += 1
         
         return True
 
@@ -46,8 +53,13 @@ async def load_and_validate_image(thumbnail, page, number_of_files_in_folder, ma
         # Check if we've reached our maximum number of images in folder
         if number_of_files_in_folder < max_number:
 
+            # click the a tag instead of the parent object
+            actual_click = await page.evaluateHandle(
+                '(thumbnail) => thumbnail.querySelector("a")',
+                thumbnail
+            )
             # Click on the thumbnail to expand the full image
-            await thumbnail.click()
+            await actual_click.click()
 
             # Wait for Google to finish serving the image, added variance for fun (if you lower this value, your success rate of downloads will be lower)
             random_sleep = random.uniform(delay, delay+0.3)
@@ -81,6 +93,11 @@ async def load_and_validate_image(thumbnail, page, number_of_files_in_folder, ma
 
     return True
 
+# loop through range asynchronously
+async def asyncrange(count):
+    for i in range(count):
+        yield(i)
+
 # Launch a pyppeteer window to navigate to google image search page, then attempt to download max_number of images
 async def find_images(search_term, max_number, save_path, delay, start_time):
     max = max_number[0]
@@ -102,58 +119,50 @@ async def find_images(search_term, max_number, save_path, delay, start_time):
     if not os.path.isdir(save_path):
         os.makedirs(save_path)
 
-    current_thumbnail = None
-
-    # Attempt to download pictures a {max_number} of times
-    for i in range(0, max-1):   
-        print(current_thumbnail is not None)
+    # Attempt to download pictures a {max_number} of times, loop asynchronously 
+    async for i in asyncrange(max-1):   
+        # get current thumbnail ElementHandle from persistent local storage
+        current_thumbnail = RUNTIME_STORAGE.current_thumbnail
+        
         if not current_thumbnail:
             try:
-                # Since Google auto-loads images as you scroll, if you try to download enough of them you'll have to refresh your master list of thumbnails
-                current_thumbnail = await page.querySelector('.islrc img.rg_i')
+                # This gets the first thumbnail on the page
+                current_thumbnail = await page.querySelector('.isv-r.PNCib')
+                # current_thumbnail = await page.querySelector('.islrc img.rg_i')
             except:
-                # This is the google class for the parent of all thumbnails on the image search page
-                print('Can not find the first thumbnail')
+                # If we can't find it
                 raise Exception('Can not find the first thumbnail, quitting')
                 break
-        else:
-            try:
-                next_thumbnail = await page.evaluate(
-                    '(current_thumbnail) => current_thumbnail.nextSibling',
-                    current_thumbnail
-                )
-                print('we got here')
-                current_thumbnail = next_thumbnail
-            except:
-                print('womp')
-
-
-
-
-
-
-        # try:
-        #     # Since Google auto-loads images as you scroll, if you try to download enough of them you'll have to refresh your master list of thumbnails
-        #     all_thumbnails[i]
-        # except:
-        #     # This is the google class for the parent of all thumbnails on the image search page
-        #     all_thumbnails = await page.querySelectorAll('.islrc img.rg_i')
-
-
-
-
-        
 
         try:
-            number_of_downloads = len(os.listdir(save_path))
-            thumbnail = current_thumbnail
-            import pdb; pdb.set_trace()
+            number_of_downloads = RUNTIME_STORAGE.number_of_downloads
+
             # Create a new parallel task to download the image 
-            success = await asyncio.create_task(load_and_validate_image(thumbnail, page, number_of_downloads, max, save_path, delay))
+            await asyncio.create_task(load_and_validate_image(current_thumbnail, page, number_of_downloads, max, save_path, delay))
         except Exception as e:
             print("Error finding image: " + str(e))
-            continue
-    
+            break   
+        finally:
+            # Attempt to find the next thumbnail based on the current element
+            try:
+                # Get the next thumbnail in the dom, if it's one of Google's "suggested search" thumbnails, skip it
+                next_thumbnail = await page.evaluateHandle(
+                    '(current_thumbnail) => { \
+                        if (current_thumbnail.nextElementSibling.hasAttribute("jsaction")) \
+                        { \
+                            return current_thumbnail.nextElementSibling; \
+                        } \
+                        else { \
+                            return current_thumbnail.nextElementSibling.nextElementSibling; \
+                        } \
+                    }',
+                    current_thumbnail
+                )
+                # Set the current thumbnail to the next one in the DOM
+                RUNTIME_STORAGE.current_thumbnail = next_thumbnail
+            except Exception as e:
+                print('Error in evaluating the next thumbnail in the DOM' + str(e))
+            
     # Get final number of images downloaded to save directory
     number_of_downloads = len(os.listdir(save_path))
 
@@ -178,6 +187,13 @@ async def find_images(search_term, max_number, save_path, delay, start_time):
     print('Oh snap-- I downloaded {} pictures of "{}" to "{}", a total of {} over {} seconds. I successfully downloaded a picture {} of the time!'.format(number_of_downloads, search_term, save_path, megabytes, total_seconds, success_rate))
     print('===============================================================================')
     await browser.close()
+    
+
+
+# Instantiate RUNTIME_STORAGE, which is persistent local storage outside the asyncio loop
+RUNTIME_STORAGE = threading.local()
+RUNTIME_STORAGE.current_thumbnail = None
+RUNTIME_STORAGE.number_of_downloads = 0
 
 # Parse command line variables
 pictures_default_location = os.path.join(environ["USERPROFILE"], "Pictures")
@@ -188,7 +204,6 @@ parser.add_argument('--savedir', metavar='(string)', type=str, help="Location to
 parser.add_argument('--delay', metavar='(float)', type=float, help="Number of seconds to wait for Google to serve images, if your success rate is low set this to 1.0 or higher (defaults to 0.3)")
 args = parser.parse_args()
 search_term = args.searchterm
-
 start_time = datetime.datetime.now()
 
 if args.max == None:
@@ -201,7 +216,6 @@ if args.delay == None:
 else:
     delay = args.delay
     
-
 try:
     save_directory = args.savedir
     save_path = os.path.join(save_directory,search_term)
@@ -210,4 +224,16 @@ except:
     save_path = os.path.join(save_directory,search_term)
 # Kick off program here
 loop = asyncio.get_event_loop()
-loop.run_until_complete(find_images(search_term, max_number, save_path, delay, start_time))  
+try:
+    loop.run_until_complete(find_images(search_term, max_number, save_path, delay, start_time))  
+except KeyboardInterrupt:
+    print("Received exit, exiting")
+    # find all futures/tasks still running and wait for them to finish
+    pending_tasks = [
+        task for task in asyncio.Task.all_tasks() if not task.done()
+    ]
+    print(pending_tasks)
+    tasks = loop.run_until_complete(asyncio.gather(*pending_tasks))
+    tasks.cancel()
+    tasks.exception()
+    loop.close()
