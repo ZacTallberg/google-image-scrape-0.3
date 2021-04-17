@@ -79,7 +79,7 @@ async def load_and_validate_image(thumbnail, page, number_of_files_in_folder, ma
                 else:
                     continue
                 
-                # Get rid of thegarbage after the .extension in the url 
+                # Get rid of the garbage after the .extension in the url 
                 image_src = check.split("?")[0]
                 
                 # Check to make sure it's of one of the extensions I want
@@ -118,6 +118,7 @@ async def find_images(search_term, max_number, save_path, delay, start_time):
     # if path doesn't exist, create the save folder
     if not os.path.isdir(save_path):
         os.makedirs(save_path)
+
 
     # Attempt to download pictures a {max_number} of times, loop asynchronously 
     async for i in asyncrange(max-1):   
@@ -224,6 +225,7 @@ except:
     save_path = os.path.join(save_directory,search_term)
 # Kick off program here
 loop = asyncio.get_event_loop()
+
 try:
     loop.run_until_complete(find_images(search_term, max_number, save_path, delay, start_time))  
 except KeyboardInterrupt:
@@ -237,3 +239,4 @@ except KeyboardInterrupt:
     tasks.cancel()
     tasks.exception()
     loop.close()
+
