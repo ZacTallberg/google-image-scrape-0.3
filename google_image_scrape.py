@@ -12,6 +12,13 @@ import threading
 
 
 async def download(url, pathname):
+    number_of_downloads = RUNTIME_STORAGE.number_of_downloads
+    attempts = RUNTIME_STORAGE.number_of_download_attempts
+    total_download_size = RUNTIME_STORAGE.total_download_size
+
+    attempts = attempts + 1
+    RUNTIME_STORAGE.number_of_download_attempts = attempts
+
     # download the body of response by chunk, not immediately
     response = requests.get(url, stream=True)
 
@@ -21,6 +28,7 @@ async def download(url, pathname):
     # get the file name
     file_obj_name = url.split("/")[-1]
     image_extensions = ['.jpg', '.png', '.jpeg']
+
     if any(extension in url.split("/")[-1] for extension in image_extensions):
         filename = os.path.join(pathname, url.split("/")[-1])
     else:
@@ -44,7 +52,10 @@ async def download(url, pathname):
             print('Error downloading image' + file_obj_name)
             pass
         else:
-            RUNTIME_STORAGE.number_of_downloads += 1
+            number_of_downloads = number_of_downloads + 1
+            RUNTIME_STORAGE.number_of_downloads = number_of_downloads
+            total_download_size = total_download_size + file_size
+            RUNTIME_STORAGE.total_download_size = total_download_size
         
         return True
 
@@ -62,8 +73,12 @@ async def load_and_validate_image(thumbnail, page, number_of_files_in_folder, ma
             await actual_click.click()
 
             # Wait for Google to finish serving the image, added variance for fun (if you lower this value, your success rate of downloads will be lower)
-            random_sleep = random.uniform(delay, delay+0.3)
-            await asyncio.sleep(random_sleep)                
+            if delay == -1:
+                pass
+            else:
+                random_sleep = random.uniform(delay, delay+0.3)
+                await asyncio.sleep(random_sleep)                
+
 
             # Get large version of image after clicking on thumbnail
             image_images = await page.querySelectorAll('.n3VNCb')
@@ -93,15 +108,13 @@ async def load_and_validate_image(thumbnail, page, number_of_files_in_folder, ma
 
     return True
 
-# loop through range asynchronously
-async def asyncrange(count):
-    for i in range(count):
-        yield(i)
+
 
 # Launch a pyppeteer window to navigate to google image search page, then attempt to download max_number of images
-async def find_images(search_term, max_number, save_path, delay, start_time):
+async def find_images(search_term, max_number, save_path, delay):
     max = max_number[0]
     print('===============================================================================')
+    print('Google Image Scraper v{}'.format(RUNTIME_STORAGE.program_version))
     print('Attempting to download {} pictures of "{}" to {}'.format(max, search_term, save_path))
     print('===============================================================================')
     browser = await launch(
@@ -119,9 +132,14 @@ async def find_images(search_term, max_number, save_path, delay, start_time):
     if not os.path.isdir(save_path):
         os.makedirs(save_path)
 
+    start_time = datetime.datetime.now()
+    RUNTIME_STORAGE.start_time = start_time
 
     # Attempt to download pictures a {max_number} of times, loop asynchronously 
-    async for i in asyncrange(max-1):   
+    for num, i in enumerate(range(max-1)):   
+
+        if num % 10 == 0 and num != 0:
+            calculate_stats(False)
         # get current thumbnail ElementHandle from persistent local storage
         current_thumbnail = RUNTIME_STORAGE.current_thumbnail
         
@@ -161,15 +179,37 @@ async def find_images(search_term, max_number, save_path, delay, start_time):
                 )
                 # Set the current thumbnail to the next one in the DOM
                 RUNTIME_STORAGE.current_thumbnail = next_thumbnail
-            except Exception as e:
-                print('Error in evaluating the next thumbnail in the DOM' + str(e))
-            
-    # Get final number of images downloaded to save directory
-    number_of_downloads = len(os.listdir(save_path))
 
-    # Calculate success rate of download attempts
-    decimal_success = round(number_of_downloads/max * 100, 2)
-    success_rate = str(decimal_success) + "%"
+            except Exception as e:
+
+                number_of_sequential_errors = RUNTIME_STORAGE.number_of_sequential_errors
+                number_of_sequential_errors = number_of_sequential_errors + 1 #
+                RUNTIME_STORAGE.number_of_sequential_errors = number_of_sequential_errors
+
+                if "Cannot read property 'hasAttribute' of null" in str(e):
+                    print('End of pictures to find, bummer!')
+                    break
+                print('Error in evaluating the next thumbnail in the DOM' + str(e))
+                continue
+
+
+    calculate_stats(True)
+    print("Finished! Closing the browser in 5 seconds...")
+    await asyncio.sleep(5000)
+    await browser.close()
+    
+
+def calculate_stats(show_full_stats):
+    # Get final number of images downloaded to save directory
+    number_of_downloads = RUNTIME_STORAGE.number_of_downloads
+    attempts = RUNTIME_STORAGE.number_of_download_attempts
+    success_rate = RUNTIME_STORAGE.success_rate
+    start_time = RUNTIME_STORAGE.start_time
+    total_download_size = RUNTIME_STORAGE.total_download_size
+    total_download_duration = RUNTIME_STORAGE.total_download_duration
+    total_calculated_size = RUNTIME_STORAGE.total_calculated_size
+    search_term = RUNTIME_STORAGE.search_term
+    save_path = RUNTIME_STORAGE.save_path
 
     # Calculate total size of all images downloaded
     total_size=0.0
@@ -177,24 +217,45 @@ async def find_images(search_term, max_number, save_path, delay, start_time):
         for f in files:
             fp = os.path.join(path, f)
             total_size += os.path.getsize(fp)
+    
+    total_calculated_size = total_size
 
-    # Get size in MB
-    megabytes = str(round(total_size/1000000, 2)) + " MB"
+    # Calculate success rate of download attempts
+    try:
+        decimal_success = round(number_of_downloads/attempts * 100, 2)
+        success_rate = str(decimal_success) + "%"
+    except ZeroDivisionError as zero_error:
+        success_rate = "0%"
+        pass
 
     # Calculate time it took to finish
-    end_time = datetime.datetime.now()
-    total_seconds = str(round((end_time-start_time).total_seconds(), 1))
-    print('===============================================================================')
-    print('Oh snap-- I downloaded {} pictures of "{}" to "{}", a total of {} over {} seconds. I successfully downloaded a picture {} of the time!'.format(number_of_downloads, search_term, save_path, megabytes, total_seconds, success_rate))
-    print('===============================================================================')
-    await browser.close()
-    
+    now_time = datetime.datetime.now()
+    total_seconds = str(round((now_time-start_time).total_seconds(), 1))
+    total_download_duration = total_seconds
 
+    # Save back all values to RUNTIME_STORAGE
+    RUNTIME_STORAGE.success_rate = success_rate
+    RUNTIME_STORAGE.total_download_duration = total_download_duration
+    RUNTIME_STORAGE.total_calculated_size = total_calculated_size
 
-# Instantiate RUNTIME_STORAGE, which is persistent local storage outside the asyncio loop
-RUNTIME_STORAGE = threading.local()
-RUNTIME_STORAGE.current_thumbnail = None
-RUNTIME_STORAGE.number_of_downloads = 0
+    if show_full_stats:
+        print('\b===============================================================================')
+        print('Search term: {}'.format(search_term))
+        print('Download location: {}'.format(save_path))
+        print('Total number of successful downloads: {}'.format(number_of_downloads))
+        print('Total number of download attempts: {}'.format(attempts))
+        print('Download success rate: {}'.format(success_rate))
+        print('Total size of all downloads: {} MB'.format(str(round(total_download_size/1000000, 2))))
+        print('Total time running: {}'.format(total_download_duration))
+        print('===============================================================================\b')
+    else:
+        print('\b===============================================================================')
+        print('Total number of successful downloads: {}'.format(number_of_downloads))
+        print('Total number of download attempts: {}'.format(attempts))
+        print('Download success rate: {}'.format(success_rate))
+        print('Total size of all downloads: {} MB'.format(str(round(total_download_size/1000000, 2))))
+        print('Total time running: {} seconds'.format(total_download_duration))
+        print('===============================================================================\b')
 
 # Parse command line variables
 pictures_default_location = os.path.join(environ["USERPROFILE"], "Pictures")
@@ -207,16 +268,19 @@ args = parser.parse_args()
 search_term = args.searchterm
 start_time = datetime.datetime.now()
 
-if args.max == None:
-    max_number = [50]
-else:
+# Check for values else default
+if args.max:
     max_number = args.max
-
-if args.delay == None:
-    delay = 0.3
 else:
+    print("no value provided for max number of downloads, defaulting to 100")
+    max_number = 100
+
+if args.delay:
     delay = args.delay
-    
+else:
+    print("no value provided for delay, defaulting to 0.3")
+    delay = 0.3
+
 try:
     save_directory = args.savedir
     save_path = os.path.join(save_directory,search_term)
@@ -226,8 +290,24 @@ except:
 # Kick off program here
 loop = asyncio.get_event_loop()
 
+# Instantiate RUNTIME_STORAGE, which is persistent local storage outside the asyncio loop
+RUNTIME_STORAGE = threading.local()
+RUNTIME_STORAGE.current_thumbnail = None
+RUNTIME_STORAGE.number_of_downloads = 0
+RUNTIME_STORAGE.number_of_download_attempts = 0
+RUNTIME_STORAGE.start_time = None
+RUNTIME_STORAGE.save_path = save_path
+RUNTIME_STORAGE.end_time = None
+RUNTIME_STORAGE.success_rate = 0.0
+RUNTIME_STORAGE.total_download_size = 0.0
+RUNTIME_STORAGE.total_download_duration = 0.0
+RUNTIME_STORAGE.total_calculated_size = 0.0
+RUNTIME_STORAGE.search_term = search_term
+RUNTIME_STORAGE.sequential_errors = 0
+RUNTIME_STORAGE.program_version = os.environ.get('VERSION')
+
 try:
-    loop.run_until_complete(find_images(search_term, max_number, save_path, delay, start_time))  
+    loop.run_until_complete(find_images(search_term, max_number, save_path, delay))  
 except KeyboardInterrupt:
     print("Received exit, exiting")
     # find all futures/tasks still running and wait for them to finish
